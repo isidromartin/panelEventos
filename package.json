@@ -6,12 +6,17 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/vite": "^4.0.15",
     "astro": "^5.5.4",
     "tailwindcss": "^4.0.15"
+  },
+  "devDependencies": {
+    "@astrojs/tailwind": "^6.0.1",
+    "@astrojs/vercel": "^8.1.3"
   }
 }
