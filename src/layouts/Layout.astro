@@ -3,6 +3,7 @@ import '../styles/global.css';
 import Navbar from '../components/Navbar.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 
+import Toast from '../components/Toast.astro';
 
 const { title = 'Panel' } = Astro.props;
 ---
@@ -19,5 +20,28 @@ const { title = 'Panel' } = Astro.props;
       <Breadcrumb />
       <slot />
     </main>
+    <Toast />
+
+    <script>
+  window.mostrarToast = function(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.remove('opacity-0', 'pointer-events-none', 'bg-green-600', 'bg-red-600', 'bg-black');
+    
+    if (type === 'success') toast.classList.add('bg-green-600');
+    else if (type === 'error') toast.classList.add('bg-red-600');
+    else toast.classList.add('bg-black');
+
+    toast.classList.add('opacity-100');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'pointer-events-none');
+      toast.classList.remove('opacity-100');
+    }, 2500);
+  };
+</script>
+
   </body>
 </html>

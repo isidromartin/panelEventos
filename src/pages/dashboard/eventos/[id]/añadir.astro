@@ -181,10 +181,10 @@ const { data: tiposReservas } = await import('../../../../lib/supabaseClient').t
   const { error } = await supabase.from(tabla).delete().eq('id', id);
 
   if (error) {
-    alert(`❌ Error al eliminar ${tipo}`);
+    mostrarToast(`❌ Error al eliminar ${tipo}`, 'error');
     console.error(error);
   } else {
-    alert(`✅ ${tipo} eliminado correctamente`);
+    mostrarToast(`✅ ${tipo} eliminado correctamente`, 'success');
     location.reload(); // o puedes quitar el elemento manualmente del DOM si prefieres
   }
 };
