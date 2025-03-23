@@ -3,6 +3,14 @@ import Layout from '../../../layouts/Layout.astro';
 import { supabaseUrl, supabaseAnonKey } from '../../../lib/supabaseClient';
 import '../../../styles/global.css';
 
+import { getSession } from '../../../lib/auth';
+
+const session = await getSession(Astro);
+
+if (!session) {
+  return Astro.redirect('/login', 302);
+}
+
 const title = 'Crear evento';
 ---
 

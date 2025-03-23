@@ -7,6 +7,14 @@ import '../../../../styles/global.css';
 import NavButtons from '../../../../components/NavButtons.astro';
 import AñadirResumen from '../../../../components/añadirResumen.astro';
 
+import { getSession } from '../../../../lib/auth';
+
+const session = await getSession(Astro);
+
+if (!session) {
+  return Astro.redirect('/login', 302);
+}
+
 const title = 'Añadir entradas, reservas y listas';
 
 const { id } = Astro.params;
