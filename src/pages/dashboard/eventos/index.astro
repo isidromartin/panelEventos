@@ -57,8 +57,15 @@ const eventosConFacturacion = eventos?.map(evento => {
     .filter(p => p.evento_id === evento.id)
     .reduce((sum, p) => sum + (p.cantidad_personas * (p.tipo_entrada_id?.precio || 0)), 0);
 
+  const totalFacturado = totalEntradas + totalReservas + totalListas + totalPuerta
+
+    const comision = evento.porcentaje_comision
+  ? (totalFacturado * (evento.porcentaje_comision / 100)).toFixed(2)
+  : '0.00';
+
   return {
     ...evento,
+    comision,
     totalFacturado: totalEntradas + totalReservas + totalListas + totalPuerta
   };
 });
@@ -74,6 +81,9 @@ const eventosConFacturacion = eventos?.map(evento => {
         <p class="text-sm text-gray-500">{evento.fecha} — {evento.tipo}</p>
         <p class="text-md text-gray-700">
           💰 <span class="font-semibold">Facturado:</span> <strong>{evento.totalFacturado.toFixed(2)} €</strong>
+        </p>
+        <p class="text-md text-gray-700">
+          💰 <span class="font-semibold">Comisionado:</span> <strong>{evento.comision} €</strong>
         </p>
         <a href={`/dashboard/eventos/${evento.id}`} class="inline-block mt-2 text-sm text-blue-600 hover:underline">
           Ver estadísticas →
