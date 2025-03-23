@@ -1,0 +1,224 @@
+---
+export const prerender = false;
+
+import Toast from '../components/Toast.astro';
+
+import { supabase, supabaseUrl, supabaseAnonKey} from '../lib/supabaseClient';
+
+const { id: eventoId } = Astro.params;
+
+const { data: entradas } = await supabase
+  .from('entradas_evento')
+  .select('cantidad, id, tipo_entrada:tipo_entrada_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+
+const { data: reservas } = await supabase
+  .from('reservas_evento')
+  .select('cantidad, id, tipo_reserva:tipo_reserva_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+
+const { data: listas } = await supabase
+  .from('listas')
+  .select('id, personas_apuntadas, personas_accedidas, tipo_entrada:tipo_entrada_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+
+const { data: enPuerta } = await supabase
+  .from('en_puerta')
+  .select('id, cantidad_personas, tipo_entrada:tipo_entrada_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+---
+
+<section class="mt-10 space-y-10"
+    id="resumen"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseAnonKey}
+    data-evento-id={eventoId}>
+  <div>
+    <h2 class="text-xl font-bold mb-4">🎫 Entradas añadidas</h2>
+    <ul class="space-y-2">
+      {entradas?.map(e => (
+        <li class="bg-white p-4 rounded shadow space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm">{e.tipo_entrada?.nombre} — {e.cantidad} unidades</span>
+            <div class="space-x-2 flex items-center">
+              <button class="text-sm text-blue-600 hover:underline" data-edit-entry={e.id}>✏️ Editar</button>
+              <button class="text-sm text-red-600 hover:underline" data-delete-entry={e.id}>🗑️ Eliminar</button>
+            </div>
+          </div>
+          <form class="edit-form hidden border-t pt-4" data-form-entry={e.id}>
+            <label class="block text-sm mb-1 text-gray-600">Cantidad</label>
+            <input type="number" name="cantidad" value={e.cantidad} min="1" class="border rounded p-2 w-full mb-2" required />
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full">Guardar cambios</button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div>
+    <h2 class="text-xl font-bold mb-4">🍾 Reservas añadidas</h2>
+    <ul class="space-y-2">
+      {reservas?.map(r => (
+        <li class="bg-white p-4 rounded shadow space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm">{r.tipo_reserva?.nombre} — {r.cantidad} unidades</span>
+            <div class="space-x-2 flex items-center">
+              <button class="text-sm text-blue-600 hover:underline" data-edit-reserva={r.id}>✏️ Editar</button>
+              <button class="text-sm text-red-600 hover:underline" data-delete-reserva={r.id}>🗑️ Eliminar</button>
+            </div>
+          </div>
+          <form class="edit-form hidden border-t pt-4" data-form-reserva={r.id}>
+            <label class="block text-sm mb-1 text-gray-600">Cantidad</label>
+            <input type="number" name="cantidad" value={r.cantidad} min="1" class="border rounded p-2 w-full mb-2" required />
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full">Guardar cambios</button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div>
+    <h2 class="text-xl font-bold mb-4">📝 Listas añadidas</h2>
+    <ul class="space-y-2">
+      {listas?.map(l => (
+        <li class="bg-white p-4 rounded shadow space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm">{l.tipo_entrada?.nombre} — {l.personas_apuntadas} / {l.personas_accedidas} personas</span>
+            <div class="space-x-2 flex items-center">
+              <button class="text-sm text-blue-600 hover:underline" data-edit-lista={l.id}>✏️ Editar</button>
+              <button class="text-sm text-red-600 hover:underline" data-delete-lista={l.id}>🗑️ Eliminar</button>
+            </div>
+          </div>
+          <form class="edit-form hidden border-t pt-4" data-form-lista={l.id}>
+            <label class="block text-sm mb-1 text-gray-600">Personas apuntadas</label>
+            <input type="number" name="personas_apuntadas" value={l.personas_apuntadas} min="0" class="border rounded p-2 w-full mb-2" required />
+            <label class="block text-sm mb-1 text-gray-600">Personas accedidas</label>
+            <input type="number" name="personas_accedidas" value={l.personas_accedidas} min="0" class="border rounded p-2 w-full mb-2" required />
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full">Guardar cambios</button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div>
+    <h2 class="text-xl font-bold mb-4">🚪 En puerta</h2>
+    <ul class="space-y-2">
+      {enPuerta?.map(p => (
+        <li class="bg-white p-4 rounded shadow space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm">{p.tipo_entrada?.nombre} — {p.cantidad_personas} personas</span>
+            <div class="space-x-2 flex items-center">
+              <button class="text-sm text-blue-600 hover:underline" data-edit-puerta={p.id}>✏️ Editar</button>
+              <button class="text-sm text-red-600 hover:underline" data-delete-puerta={p.id}>🗑️ Eliminar</button>
+            </div>
+          </div>
+          <form class="edit-form hidden border-t pt-4" data-form-puerta={p.id}>
+            <label class="block text-sm mb-1 text-gray-600">Cantidad de personas</label>
+            <input type="number" name="cantidad_personas" value={p.cantidad_personas} min="1" class="border rounded p-2 w-full mb-2" required />
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 w-full">Guardar cambios</button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<Toast client:visible />
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+
+  function crearSupabase() {
+    const el = document.getElementById('resumen');
+    return createClient(el.dataset.supabaseUrl, el.dataset.supabaseKey);
+  }
+
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+
+    const showForm = (attr, selector) => {
+      if (target.dataset[attr]) {
+        const form = document.querySelector(`[${selector}="${target.dataset[attr]}"]`);
+        if (form) form.classList.toggle('hidden');
+      }
+    };
+
+    showForm('editEntry', 'data-form-entry');
+    showForm('editReserva', 'data-form-reserva');
+    showForm('editLista', 'data-form-lista');
+    showForm('editPuerta', 'data-form-puerta');
+
+    const confirmAndDelete = async (attr, table, idKey, label) => {
+      if (target.dataset[attr]) {
+        const confirmar = confirm(`¿Eliminar esta ${label}?`);
+        if (!confirmar) return;
+        const supabase = crearSupabase();
+        const { error } = await supabase.from(table).delete().eq('id', target.dataset[attr]);
+        if (error) {
+          mostrarToast(`❌ Error al eliminar ${label}`);
+        } else {
+          mostrarToast(`✅ ${label.charAt(0).toUpperCase() + label.slice(1)} eliminada`);
+          location.reload();
+        }
+      }
+    };
+
+    confirmAndDelete('deleteEntry', 'entradas_evento', 'id', 'entrada');
+    confirmAndDelete('deleteReserva', 'reservas_evento', 'id', 'reserva');
+    confirmAndDelete('deleteLista', 'listas', 'id', 'lista');
+    confirmAndDelete('deletePuerta', 'en_puerta', 'id', 'registro en puerta');
+  });
+
+  const bindUpdate = (selector, table, buildData) => {
+  document.querySelectorAll(`[${selector}]`).forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = form.getAttribute(selector);
+      const data = buildData(form);
+      const supabase = crearSupabase();
+      const { error } = await supabase.from(table).update(data).eq('id', id);
+      if (error) {
+        mostrarToast('❌ Error al actualizar', 'error');
+      } else {
+        mostrarToast('✅ Actualizado correctamente', 'success');
+        setTimeout(() => location.reload(), 800);
+      }
+    });
+  });
+};
+
+  bindUpdate('data-form-entry', 'entradas_evento', (form) => ({
+    cantidad: parseInt(form.cantidad.value)
+  }));
+
+  bindUpdate('data-form-reserva', 'reservas_evento', (form) => ({
+    cantidad: parseInt(form.cantidad.value)
+  }));
+
+  bindUpdate('data-form-lista', 'listas', (form) => ({
+    personas_apuntadas: parseInt(form.personas_apuntadas.value),
+    personas_accedidas: parseInt(form.personas_accedidas.value)
+  }));
+
+  bindUpdate('data-form-puerta', 'en_puerta', (form) => ({
+    cantidad_personas: parseInt(form.cantidad_personas.value)
+  }));
+
+  function mostrarToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-black');
+    if (type === 'success') toast.classList.add('bg-green-600');
+    else if (type === 'error') toast.classList.add('bg-red-600');
+    else toast.classList.add('bg-black');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'pointer-events-none');
+      toast.classList.remove('opacity-100');
+    }, 2500);
+  }
+</script>

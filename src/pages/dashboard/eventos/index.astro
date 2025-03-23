@@ -1,0 +1,76 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { supabase } from '../../../lib/supabaseClient';
+import '../../../styles/global.css';
+
+const title = 'Eventos';
+
+const { data: eventos } = await supabase.from('eventos').select('*');
+
+const idsEventos = eventos?.map(e => e.id) ?? [];
+let entradas = [], reservas = [], listas = [], enPuerta = [];
+
+if (idsEventos.length > 0) {
+  const { data: e } = await supabase
+    .from('entradas_evento')
+    .select('evento_id, cantidad, tipo_entrada_id (precio)');
+  entradas = e ?? [];
+
+  const { data: r } = await supabase
+    .from('reservas_evento')
+    .select('evento_id, cantidad, tipo_reserva_id (precio)');
+  reservas = r ?? [];
+
+  const { data: l } = await supabase
+    .from('listas')
+    .select('evento_id, personas_accedidas, tipo_entrada_id (precio)');
+  listas = l ?? [];
+
+  const { data: p } = await supabase
+    .from('en_puerta')
+    .select('evento_id, cantidad_personas, tipo_entrada_id (precio)');
+  enPuerta = p ?? [];
+}
+
+const eventosConFacturacion = eventos?.map(evento => {
+  const totalEntradas = entradas
+    .filter(e => e.evento_id === evento.id)
+    .reduce((sum, e) => sum + (e.cantidad * (e.tipo_entrada_id?.precio || 0)), 0);
+
+  const totalReservas = reservas
+    .filter(r => r.evento_id === evento.id)
+    .reduce((sum, r) => sum + (r.cantidad * (r.tipo_reserva_id?.precio || 0)), 0);
+
+  const totalListas = listas
+    .filter(l => l.evento_id === evento.id)
+    .reduce((sum, l) => sum + (l.personas_accedidas * (l.tipo_entrada_id?.precio || 0)), 0);
+
+  const totalPuerta = enPuerta
+    .filter(p => p.evento_id === evento.id)
+    .reduce((sum, p) => sum + (p.cantidad_personas * (p.tipo_entrada_id?.precio || 0)), 0);
+
+  return {
+    ...evento,
+    totalFacturado: totalEntradas + totalReservas + totalListas + totalPuerta
+  };
+});
+---
+
+<Layout title={title}>
+  <h1 class="text-4xl font-bold mb-8">📅 {title}</h1>
+
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {eventosConFacturacion?.map(evento => (
+      <div class="bg-white rounded-2xl shadow-lg border p-6 space-y-3 hover:shadow-xl transition">
+        <h2 class="text-xl font-bold text-gray-800">{evento.nombre}</h2>
+        <p class="text-sm text-gray-500">{evento.fecha} — {evento.tipo}</p>
+        <p class="text-md text-gray-700">
+          💰 <span class="font-semibold">Facturado:</span> <strong>{evento.totalFacturado.toFixed(2)} €</strong>
+        </p>
+        <a href={`/dashboard/eventos/${evento.id}`} class="inline-block mt-2 text-sm text-blue-600 hover:underline">
+          Ver estadísticas →
+        </a>
+      </div>
+    ))}
+  </section>
+</Layout>

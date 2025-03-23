@@ -1,11 +1,33 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const title = 'Inicio';
 ---
 
-<Layout>
-	<Welcome />
+<Layout title={title}>
+  <section class="text-center mt-16 space-y-6">
+    <h1 class="text-5xl font-extrabold text-gray-900">🎉 Bienvenido a tu panel de eventos</h1>
+    <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+      Aquí podrás gestionar tus fiestas, añadir entradas, controlar asistentes, ver tus estadísticas
+      y calcular tu comisión total con facilidad.
+    </p>
+
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 max-w-4xl mx-auto">
+      <a href="/dashboard/eventos" class="bg-white border p-6 rounded-2xl shadow hover:shadow-lg transition text-left">
+        <h2 class="text-xl font-semibold text-gray-800 mb-1">📅 Ver eventos</h2>
+        <p class="text-sm text-gray-600">Consulta, edita y analiza cada uno de tus eventos.</p>
+      </a>
+
+      <a href="/dashboard/eventos/nuevo" class="bg-white border p-6 rounded-2xl shadow hover:shadow-lg transition text-left">
+        <h2 class="text-xl font-semibold text-gray-800 mb-1">🆕 Crear nuevo evento</h2>
+        <p class="text-sm text-gray-600">Agrega un nuevo evento y empieza a registrar tus datos.</p>
+      </a>
+
+      <a href="/dashboard" class="bg-white border p-6 rounded-2xl shadow hover:shadow-lg transition text-left">
+        <h2 class="text-xl font-semibold text-gray-800 mb-1">📊 Dashboard general</h2>
+        <p class="text-sm text-gray-600">Resumen global con total facturado, asistentes y más.</p>
+      </a>
+    </div>
+  </section>
 </Layout>

@@ -1,0 +1,146 @@
+---
+export const prerender = false;
+
+import Layout from '../../../layouts/Layout.astro';
+import { supabase } from '../../../lib/supabaseClient';
+import '../../../styles/global.css';
+
+import NavButtons from '../../../components/NavButtons.astro';
+
+const title = 'Estadísticas del evento';
+
+const { id } = Astro.params;
+const eventoId = id;
+
+const { data: evento } = await supabase
+  .from('eventos')
+  .select('*')
+  .eq('id', eventoId)
+  .single();
+
+if (!evento) {
+  throw new Error('Evento no encontrado');
+}
+
+const { data: entradas } = await supabase
+  .from('entradas_evento')
+  .select('cantidad, tipo_entrada:tipo_entrada_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+
+const { data: reservas } = await supabase
+  .from('reservas_evento')
+  .select('cantidad, tipo_reserva:tipo_reserva_id (nombre, precio)')
+  .eq('evento_id', eventoId);
+
+const { data: listas } = await supabase
+  .from('listas')
+  .select('personas_apuntadas, personas_accedidas, tipo_entrada:tipo_entrada_id (precio)')
+  .eq('evento_id', eventoId);
+
+const { data: enPuerta } = await supabase
+  .from('en_puerta')
+  .select('cantidad_personas, tipo_entrada:tipo_entrada_id (precio)')
+  .eq('evento_id', eventoId);
+
+const totalEntradas = entradas?.reduce((sum, e) => sum + (e.cantidad || 0), 0) ?? 0;
+const totalEntradasFacturado = entradas?.reduce((sum, e) => {
+  const precio = e.tipo_entrada?.precio ?? 0;
+  return sum + precio * (e.cantidad ?? 0);
+}, 0) ?? 0;
+
+const totalReservas = reservas?.reduce((sum, r) => sum + (r.cantidad || 0), 0) ?? 0;
+const totalReservasFacturado = reservas?.reduce((sum, r) => {
+  const precio = r.tipo_reserva?.precio ?? 0;
+  return sum + precio * (r.cantidad ?? 0);
+}, 0) ?? 0;
+
+const totalListasAccedidas = listas?.reduce((sum, l) => {
+  const precio = l.tipo_entrada?.precio ?? 0;
+  return sum + precio * (l.personas_accedidas ?? 0);
+}, 0) ?? 0;
+
+const totalEnPuerta = enPuerta?.reduce((sum, p) => {
+  const precio = p.tipo_entrada?.precio ?? 0;
+  return sum + precio * (p.cantidad_personas ?? 0);
+}, 0) ?? 0;
+
+const totalFacturado = totalEntradasFacturado + totalReservasFacturado + totalListasAccedidas + totalEnPuerta;
+
+const totalApuntados = listas?.reduce((sum, l) => sum + (l.personas_apuntadas || 0), 0) ?? 0;
+const totalAccedidos = listas?.reduce((sum, l) => sum + (l.personas_accedidas || 0), 0) ?? 0;
+const porcentajeConversion = totalApuntados > 0
+  ? ((totalAccedidos / totalApuntados) * 100).toFixed(1)
+  : '0.0';
+
+const comision = evento.porcentaje_comision
+  ? (totalFacturado * (evento.porcentaje_comision / 100)).toFixed(2)
+  : '0.00';
+---
+
+<Layout title={title}>
+<h1 class="text-4xl font-bold mb-2">📊 {evento.nombre}</h1>
+<p class="text-gray-500 text-sm mb-6">{evento.fecha} — {evento.tipo}</p>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">💶 Total facturado</h2>
+    <p class="text-3xl font-bold text-gray-800">{totalFacturado.toFixed(2)} €</p>
+  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">🎫 Entradas</h2>
+    <p class="text-3xl font-bold text-gray-800">{totalEntradas}</p>
+  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">🍾 Reservas</h2>
+    <p class="text-3xl font-bold text-gray-800">{totalReservas}</p>
+  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">📝 Listas</h2>
+    <p class="text-sm text-gray-700">Apuntados: <strong>{totalApuntados}</strong></p>
+    <p class="text-sm text-gray-700">Accedidos: <strong>{totalAccedidos}</strong></p>
+    <p class="text-sm text-gray-700">Conversión: <strong>{porcentajeConversion}%</strong></p>
+  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">🚪 En puerta</h2>
+    <p class="text-3xl font-bold text-gray-800">{enPuerta?.reduce((sum, p) => sum + (p.cantidad_personas || 0), 0) ?? 0}</p>
+  </div>
+  <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <h2 class="text-md text-gray-500">💰 Mi comisión</h2>
+    <p class="text-3xl font-bold text-gray-800">{comision} €</p>
+    <p class="text-sm text-gray-500">{evento.porcentaje_comision || 0}% de la facturación</p>
+  </div>
+</section>
+
+<section class="bg-white p-6 rounded-2xl shadow-lg border mt-10">
+  <h2 class="text-xl font-semibold mb-4">📈 Evolución de ventas por día</h2>
+  <canvas id="graficaVentas" height="100"></canvas>
+</section>
+
+<NavButtons eventoId={eventoId} current="ver" />
+
+
+  <script type="module">
+    import Chart from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+
+    const ctx = document.getElementById('graficaVentas').getContext('2d');
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {JSON.stringify(labels)},
+        datasets: [{
+          label: 'Ventas (€)',
+          data: {JSON.stringify(datos)},
+          borderColor: '#3b82f6',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  </script>
+</Layout>

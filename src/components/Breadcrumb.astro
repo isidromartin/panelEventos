@@ -1,0 +1,61 @@
+---
+import { supabase } from '../lib/supabaseClient';
+
+const path = Astro.url.pathname;
+const parts = path.split('/').filter(p => p);
+
+const mapLabels = {
+  dashboard: 'Dashboard',
+  eventos: 'Eventos',
+  añadir: 'Añadir',
+  user: 'Mi perfil',
+  rol: 'Cambiar rol'
+};
+
+// Detectar si estamos en eventos/[id]
+let nombreEvento = null;
+if (parts[0] === 'dashboard' && parts[1] === 'eventos' && parts[2]) {
+  const idEvento = parts[2];
+  const { data } = await supabase
+    .from('eventos')
+    .select('nombre')
+    .eq('id', idEvento)
+    .single();
+  nombreEvento = data?.nombre;
+}
+
+// Generar breadcrumbs
+const breadcrumbs = parts.map((part, index) => {
+  const href = '/' + parts.slice(0, index + 1).join('/');
+
+  let rawLabel = mapLabels[part] || decodeURIComponent(part.replace(/[-_]/g, ' '));
+if (part === parts[2] && nombreEvento) rawLabel = nombreEvento;
+
+const label = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+
+  return {
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    href: index < parts.length - 1 ? href : null
+  };
+});
+---
+
+{breadcrumbs.length > 0 && (
+  <nav class="text-sm text-gray-600 mb-10">
+    <ul class="flex flex-wrap items-center gap-1">
+      <li><a href="/" class="hover:underline text-blue-600">Inicio</a></li>
+      <li class="text-gray-400">/</li>
+      {breadcrumbs.map((b, i) => (
+        <>
+          <li>
+            {b.href
+              ? <a href={b.href} class="hover:underline text-blue-600">{b.label}</a>
+              : <span class="font-semibold">{b.label}</span>}
+          </li>
+          {i < breadcrumbs.length - 1 && <li class="text-gray-400">/</li>}
+        </>
+      ))}
+    </ul>
+  </nav>
+)}
+

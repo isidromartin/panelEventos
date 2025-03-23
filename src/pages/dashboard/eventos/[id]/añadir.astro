@@ -1,0 +1,233 @@
+---
+export const prerender = false;
+import Layout from '../../../../layouts/Layout.astro';
+import { supabaseUrl, supabaseAnonKey } from '../../../../lib/supabaseClient';
+import '../../../../styles/global.css';
+
+import Toast from '../../../../components/Toast.astro';
+
+import NavButtons from '../../../../components/NavButtons.astro';
+import AñadirResumen from '../../../../components/añadirResumen.astro';
+
+const title = 'Añadir entradas, reservas y listas';
+
+const { id } = Astro.params;
+const eventoId = id;
+
+const { data: tiposEntradas } = await import('../../../../lib/supabaseClient').then(({ supabase }) =>
+  supabase.from('tipos_entradas').select('*')
+);
+
+const { data: tiposReservas } = await import('../../../../lib/supabaseClient').then(({ supabase }) =>
+  supabase.from('tipos_reservas').select('*')
+);
+---
+
+<Layout title={title}>
+  <h1 class="text-3xl font-bold mb-6">➕ {title}</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+  <!-- ENTRADAS -->
+  <form id="form-entradas" class="bg-white p-4 rounded-xl shadow space-y-4"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseAnonKey}
+    data-evento-id={eventoId}>
+    <h2 class="text-xl font-semibold">🎫 Añadir entradas</h2>
+    <select id="tipo-entrada" class="w-full border p-2 rounded" required>
+      <option value="">Selecciona tipo de entrada</option>
+      {tiposEntradas?.map(t => (
+        <option value={t.id}>{t.nombre} — {t.precio}€</option>
+      ))}
+    </select>
+    <input type="number" id="cantidad-entrada" placeholder="Cantidad" min="1" class="w-full border p-2 rounded" required />
+    <button type="submit" class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
+      Añadir entradas
+    </button>
+    <p id="mensaje-entrada" class="text-sm text-center mt-2"></p>
+  </form>
+
+  <!-- RESERVAS -->
+  <form id="form-reservas" class="bg-white p-6 rounded-xl shadow space-y-4 max-w-xl mb-10"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseAnonKey}
+    data-evento-id={eventoId}>
+    <h2 class="text-xl font-semibold">🍾 Añadir reservas</h2>
+    <select id="tipo-reserva" class="w-full border p-2 rounded" required>
+      <option value="">Selecciona tipo de reserva</option>
+      {tiposReservas?.map(t => (
+        <option value={t.id}>{t.nombre} — {t.precio}€</option>
+      ))}
+    </select>
+    <input type="number" id="cantidad-reserva" placeholder="Cantidad" min="1" class="w-full border p-2 rounded" required />
+    <button type="submit" class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
+      Añadir reservas
+    </button>
+    <p id="mensaje-reserva" class="text-sm text-center mt-2"></p>
+  </form>
+
+  <!-- LISTAS -->
+  <form id="form-listas" class="bg-white p-6 rounded-xl shadow space-y-4 max-w-xl mb-10"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseAnonKey}
+    data-evento-id={eventoId}>
+    <h2 class="text-xl font-semibold">📝 Añadir lista</h2>
+    <select id="tipo-lista" class="w-full border p-2 rounded" required>
+      <option value="">Selecciona tipo de entrada</option>
+      {tiposEntradas?.map(t => (
+        <option value={t.id}>{t.nombre} — {t.precio}€</option>
+      ))}
+    </select>
+    <input type="number" id="apuntados" placeholder="Personas apuntadas" min="0" class="w-full border p-2 rounded" required />
+    <input type="number" id="accedidos" placeholder="Personas accedidas" min="0" class="w-full border p-2 rounded" required />
+    <button type="submit" class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
+      Añadir lista
+    </button>
+    <p id="mensaje-lista" class="text-sm text-center mt-2"></p>
+  </form>
+
+  <!-- EN PUERTA -->
+  <form id="form-en-puerta" class="bg-white p-6 rounded-xl shadow space-y-4 max-w-xl mb-10"
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabaseAnonKey}
+    data-evento-id={eventoId}>
+    <h2 class="text-xl font-semibold">🚪 Añadir acceso en puerta</h2>
+    <select id="tipo-puerta" class="w-full border p-2 rounded" required>
+      <option value="">Selecciona tipo de entrada</option>
+      {tiposEntradas?.map(t => (
+        <option value={t.id}>{t.nombre} — {t.precio}€</option>
+      ))}
+    </select>
+    <input type="number" id="cantidad-puerta" placeholder="Cantidad de personas" min="1" class="w-full border p-2 rounded" required />
+    <button type="submit" class="w-full bg-black text-white p-2 rounded hover:bg-gray-800">
+      Añadir en puerta
+    </button>
+    <p id="mensaje-puerta" class="text-sm text-center mt-2"></p>
+  </form>
+</div>
+  <NavButtons eventoId={eventoId} current="añadir" />
+
+  <AñadirResumen />
+
+  <Toast client:visible />
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+
+    function crearSupabase(form) {
+      return createClient(form.dataset.supabaseUrl, form.dataset.supabaseKey);
+    }
+
+    // Entradas
+    document.getElementById('form-entradas').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const eventoId = form.dataset.eventoId;
+      const supabase = crearSupabase(form);
+      const tipo_id = document.getElementById('tipo-entrada').value;
+      const cantidad = parseInt(document.getElementById('cantidad-entrada').value);
+      const { error } = await supabase.from('entradas_evento').insert({ evento_id: eventoId, tipo_entrada_id: tipo_id, cantidad });
+      const mensaje = document.getElementById('mensaje-entrada');
+      mensaje.textContent = error ? '❌ Error al añadir entradas' : '✅ Entradas añadidas';
+      mensaje.className = error ? 'text-red-600 text-center text-sm' : 'text-green-600 text-center text-sm';
+      if (!error) form.reset();
+    });
+
+    // Reservas
+    document.getElementById('form-reservas').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const eventoId = form.dataset.eventoId;
+      const supabase = crearSupabase(form);
+      const tipo_id = document.getElementById('tipo-reserva').value;
+      const cantidad = parseInt(document.getElementById('cantidad-reserva').value);
+      const { error } = await supabase.from('reservas_evento').insert({ evento_id: eventoId, tipo_reserva_id: tipo_id, cantidad });
+      const mensaje = document.getElementById('mensaje-reserva');
+      mensaje.textContent = error ? '❌ Error al añadir reservas' : '✅ Reservas añadidas';
+      mensaje.className = error ? 'text-red-600 text-center text-sm' : 'text-green-600 text-center text-sm';
+      if (!error) form.reset();
+    });
+
+    // Listas
+    document.getElementById('form-listas').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const eventoId = form.dataset.eventoId;
+      const supabase = crearSupabase(form);
+      const tipo_id = document.getElementById('tipo-lista').value;
+      const personas_apuntadas = parseInt(document.getElementById('apuntados').value);
+      const personas_accedidas = parseInt(document.getElementById('accedidos').value);
+      const { error } = await supabase.from('listas').insert({ evento_id: eventoId, tipo_entrada_id: tipo_id, personas_apuntadas, personas_accedidas });
+      const mensaje = document.getElementById('mensaje-lista');
+      mensaje.textContent = error ? '❌ Error al añadir la lista' : '✅ Lista añadida';
+      mensaje.className = error ? 'text-red-600 text-center text-sm' : 'text-green-600 text-center text-sm';
+      if (!error) form.reset();
+    });
+
+    // En puerta
+    document.getElementById('form-en-puerta').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const eventoId = form.dataset.eventoId;
+      const supabase = crearSupabase(form);
+      const tipo_id = document.getElementById('tipo-puerta').value;
+      const cantidad_personas = parseInt(document.getElementById('cantidad-puerta').value);
+      const { error } = await supabase.from('en_puerta').insert({ evento_id: eventoId, tipo_entrada_id: tipo_id, cantidad_personas });
+      const mensaje = document.getElementById('mensaje-puerta');
+      mensaje.textContent = error ? '❌ Error al añadir en puerta' : '✅ Añadido en puerta';
+      mensaje.className = error ? 'text-red-600 text-center text-sm' : 'text-green-600 text-center text-sm';
+      if (!error) form.reset();
+    });
+
+    const handleDelete = async (id, tabla, tipo) => {
+  const confirmar = confirm(`¿Eliminar este ${tipo}?`);
+  if (!confirmar) return;
+
+  const supabase = crearSupabase(document.body);
+  const { error } = await supabase.from(tabla).delete().eq('id', id);
+
+  if (error) {
+    mostrarToast(`❌ Error al eliminar ${tipo}`);
+    console.error(error);
+  } else {
+    mostrarToast(`✅ ${tipo} eliminado correctamente`);
+    location.reload(); // o puedes quitar el elemento manualmente del DOM si prefieres
+  }
+};
+
+document.addEventListener('click', (e) => {
+  const target = e.target;
+
+  if (target.dataset.deleteEntry) {
+    handleDelete(target.dataset.deleteEntry, 'entradas_evento', 'entrada');
+  }
+
+  if (target.dataset.deleteReserva) {
+    handleDelete(target.dataset.deleteReserva, 'reservas_evento', 'reserva');
+  }
+
+  if (target.dataset.deleteLista) {
+    handleDelete(target.dataset.deleteLista, 'listas', 'lista');
+  }
+
+  if (target.dataset.deletePuerta) {
+    handleDelete(target.dataset.deletePuerta, 'en_puerta', 'registro de puerta');
+  }
+});
+
+function mostrarToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-black');
+    if (type === 'success') toast.classList.add('bg-green-600');
+    else if (type === 'error') toast.classList.add('bg-red-600');
+    else toast.classList.add('bg-black');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'pointer-events-none');
+      toast.classList.remove('opacity-100');
+    }, 2500);
+  }
+  </script>
+</Layout>

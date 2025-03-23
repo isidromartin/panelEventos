@@ -1,0 +1,30 @@
+---
+const { eventoId = null, current = '' } = Astro.props;
+const path = Astro.url.pathname;
+---
+
+<section class="flex flex-wrap gap-2 mb-4">
+  {path !== '/dashboard/eventos' && (
+    <a href="/dashboard/eventos" class="bg-white border rounded px-4 py-2 shadow hover:bg-gray-100">
+      📁 Ver eventos
+    </a>
+  )}
+
+  {path !== '/dashboard/eventos/nuevo' && (
+    <a href="/dashboard/eventos/nuevo" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      🆕 Crear nuevo evento
+    </a>
+  )}
+
+  {eventoId && current !== 'añadir' && (
+    <a href={`/dashboard/eventos/${eventoId}/añadir`} class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      ➕ Añadir entradas y reservas
+    </a>
+  )}
+
+  {eventoId && current !== 'ver' && (
+    <a href={`/dashboard/eventos/${eventoId}`} class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">
+      📊 Ver estadísticas
+    </a>
+  )}
+</section>
