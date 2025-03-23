@@ -127,10 +127,10 @@ const comision = evento.porcentaje_comision
     new Chart(ctx, {
       type: 'line',
       data: {
-        labels: {JSON.stringify(labels)},
+        labels: JSON.stringify(labels),
         datasets: [{
           label: 'Ventas (€)',
-          data: {JSON.stringify(datos)},
+          data: JSON.stringify(datos),
           borderColor: '#3b82f6',
           fill: true,
           tension: 0.3

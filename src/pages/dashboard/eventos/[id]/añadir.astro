@@ -4,8 +4,6 @@ import Layout from '../../../../layouts/Layout.astro';
 import { supabaseUrl, supabaseAnonKey } from '../../../../lib/supabaseClient';
 import '../../../../styles/global.css';
 
-import Toast from '../../../../components/Toast.astro';
-
 import NavButtons from '../../../../components/NavButtons.astro';
 import AñadirResumen from '../../../../components/añadirResumen.astro';
 
@@ -107,8 +105,6 @@ const { data: tiposReservas } = await import('../../../../lib/supabaseClient').t
 
   <AñadirResumen />
 
-  <Toast client:visible />
-
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
@@ -185,10 +181,10 @@ const { data: tiposReservas } = await import('../../../../lib/supabaseClient').t
   const { error } = await supabase.from(tabla).delete().eq('id', id);
 
   if (error) {
-    mostrarToast(`❌ Error al eliminar ${tipo}`);
+    alert(`❌ Error al eliminar ${tipo}`);
     console.error(error);
   } else {
-    mostrarToast(`✅ ${tipo} eliminado correctamente`);
+    alert(`✅ ${tipo} eliminado correctamente`);
     location.reload(); // o puedes quitar el elemento manualmente del DOM si prefieres
   }
 };
@@ -212,22 +208,5 @@ document.addEventListener('click', (e) => {
     handleDelete(target.dataset.deletePuerta, 'en_puerta', 'registro de puerta');
   }
 });
-
-function mostrarToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.remove('opacity-0', 'pointer-events-none');
-    toast.classList.add('opacity-100');
-
-    toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-black');
-    if (type === 'success') toast.classList.add('bg-green-600');
-    else if (type === 'error') toast.classList.add('bg-red-600');
-    else toast.classList.add('bg-black');
-
-    setTimeout(() => {
-      toast.classList.add('opacity-0', 'pointer-events-none');
-      toast.classList.remove('opacity-100');
-    }, 2500);
-  }
   </script>
 </Layout>

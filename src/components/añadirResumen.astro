@@ -1,8 +1,6 @@
 ---
 export const prerender = false;
 
-import Toast from '../components/Toast.astro';
-
 import { supabase, supabaseUrl, supabaseAnonKey} from '../lib/supabaseClient';
 
 const { id: eventoId } = Astro.params;
@@ -124,8 +122,6 @@ const { data: enPuerta } = await supabase
   </div>
 </section>
 
-<Toast client:visible />
-
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
@@ -156,9 +152,9 @@ const { data: enPuerta } = await supabase
         const supabase = crearSupabase();
         const { error } = await supabase.from(table).delete().eq('id', target.dataset[attr]);
         if (error) {
-          mostrarToast(`❌ Error al eliminar ${label}`);
+          alert(`❌ Error al eliminar ${label}`);
         } else {
-          mostrarToast(`✅ ${label.charAt(0).toUpperCase() + label.slice(1)} eliminada`);
+          alert(`✅ ${label.charAt(0).toUpperCase() + label.slice(1)} eliminada`);
           location.reload();
         }
       }
@@ -179,9 +175,9 @@ const { data: enPuerta } = await supabase
       const supabase = crearSupabase();
       const { error } = await supabase.from(table).update(data).eq('id', id);
       if (error) {
-        mostrarToast('❌ Error al actualizar', 'error');
+        alert('❌ Error al actualizar', 'error');
       } else {
-        mostrarToast('✅ Actualizado correctamente', 'success');
+        alert('✅ Actualizado correctamente', 'success');
         setTimeout(() => location.reload(), 800);
       }
     });
@@ -204,21 +200,4 @@ const { data: enPuerta } = await supabase
   bindUpdate('data-form-puerta', 'en_puerta', (form) => ({
     cantidad_personas: parseInt(form.cantidad_personas.value)
   }));
-
-  function mostrarToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.remove('opacity-0', 'pointer-events-none');
-    toast.classList.add('opacity-100');
-
-    toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-black');
-    if (type === 'success') toast.classList.add('bg-green-600');
-    else if (type === 'error') toast.classList.add('bg-red-600');
-    else toast.classList.add('bg-black');
-
-    setTimeout(() => {
-      toast.classList.add('opacity-0', 'pointer-events-none');
-      toast.classList.remove('opacity-100');
-    }, 2500);
-  }
 </script>
