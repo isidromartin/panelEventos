@@ -1,43 +1,46 @@
 ---
-import '../../styles/global.css';
-import { supabase } from '../../lib/supabaseClient';
-import Layout from '../../layouts/Layout.astro';
-import NavButtons from '../../components/NavButtons.astro';
+import "../../styles/global.css";
+import { supabase } from "../../lib/supabaseClient";
+import Layout from "../../layouts/Layout.astro";
+import NavButtons from "../../components/NavButtons.astro";
 
-import { getSession } from '../../lib/auth';
+import { getSession } from "../../lib/auth";
 
 const session = await getSession(Astro);
 
 if (!session) {
-  return Astro.redirect('/login', 302);
+  return Astro.redirect("/login", 302);
 }
 
-const title = 'Dashboard general';
+const title = "Dashboard general";
 
-const { data: eventos } = await supabase.from('eventos').select('*');
-const idsEventos = eventos?.map(e => e.id) ?? [];
+const { data: eventos } = await supabase.from("eventos").select("*");
+const idsEventos = eventos?.map((e) => e.id) ?? [];
 
-let entradas = [], reservas = [], listas = [], enPuerta = [];
+let entradas = [],
+  reservas = [],
+  listas = [],
+  enPuerta = [];
 
 if (idsEventos.length > 0) {
   const { data: e } = await supabase
-    .from('entradas_evento')
-    .select('evento_id, cantidad, tipo_entrada_id (precio, nombre)');
+    .from("entradas_evento")
+    .select("evento_id, cantidad, tipo_entrada_id (precio, nombre)");
   entradas = e ?? [];
 
   const { data: r } = await supabase
-    .from('reservas_evento')
-    .select('evento_id, cantidad, tipo_reserva_id (precio, nombre)');
+    .from("reservas_evento")
+    .select("evento_id, cantidad, tipo_reserva_id (precio, nombre)");
   reservas = r ?? [];
 
   const { data: l } = await supabase
-    .from('listas')
-    .select('evento_id, personas_accedidas, tipo_entrada_id (precio, nombre)');
+    .from("listas")
+    .select("evento_id, personas_accedidas, tipo_entrada_id (precio, nombre)");
   listas = l ?? [];
 
   const { data: p } = await supabase
-    .from('en_puerta')
-    .select('evento_id, cantidad_personas, tipo_entrada_id (precio, nombre)');
+    .from("en_puerta")
+    .select("evento_id, cantidad_personas, tipo_entrada_id (precio, nombre)");
   enPuerta = p ?? [];
 }
 
@@ -52,41 +55,50 @@ let totalComisiones = 0;
 const tarifas = {};
 
 for (const evento of eventos) {
-  const entradasEvento = entradas.filter(e => e.evento_id === evento.id);
-  const reservasEvento = reservas.filter(r => r.evento_id === evento.id);
-  const listasEvento = listas.filter(l => l.evento_id === evento.id);
-  const enPuertaEvento = enPuerta.filter(p => p.evento_id === evento.id);
+  const entradasEvento = entradas.filter((e) => e.evento_id === evento.id);
+  const reservasEvento = reservas.filter((r) => r.evento_id === evento.id);
+  const listasEvento = listas.filter((l) => l.evento_id === evento.id);
+  const enPuertaEvento = enPuerta.filter((p) => p.evento_id === evento.id);
 
   const totalEntradas = entradasEvento.reduce((sum, e) => {
-    const nombre = e.tipo_entrada_id?.nombre || 'Desconocido';
+    const nombre = e.tipo_entrada_id?.nombre || "Desconocido";
     tarifas[nombre] = (tarifas[nombre] || 0) + e.cantidad;
-    return sum + (e.cantidad * (e.tipo_entrada_id?.precio || 0));
+    return sum + e.cantidad * (e.tipo_entrada_id?.precio || 0);
   }, 0);
 
   const totalReservas = reservasEvento.reduce((sum, r) => {
-    const nombre = r.tipo_reserva_id?.nombre || 'Desconocido';
+    const nombre = r.tipo_reserva_id?.nombre || "Desconocido";
     tarifas[nombre] = (tarifas[nombre] || 0) + r.cantidad;
-    return sum + (r.cantidad * (r.tipo_reserva_id?.precio || 0));
+    return sum + r.cantidad * (r.tipo_reserva_id?.precio || 0);
   }, 0);
 
   const totalListas = listasEvento.reduce((sum, l) => {
-    const nombre = l.tipo_entrada_id?.nombre || 'Desconocido';
+    const nombre = l.tipo_entrada_id?.nombre || "Desconocido";
     tarifas[nombre] = (tarifas[nombre] || 0) + l.personas_accedidas;
-    return sum + (l.personas_accedidas * (l.tipo_entrada_id?.precio || 0));
+    return sum + l.personas_accedidas * (l.tipo_entrada_id?.precio || 0);
   }, 0);
 
   const totalPuerta = enPuertaEvento.reduce((sum, p) => {
-    const nombre = p.tipo_entrada_id?.nombre || 'Desconocido';
+    const nombre = p.tipo_entrada_id?.nombre || "Desconocido";
     tarifas[nombre] = (tarifas[nombre] || 0) + p.cantidad_personas;
-    return sum + (p.cantidad_personas * (p.tipo_entrada_id?.precio || 0));
+    return sum + p.cantidad_personas * (p.tipo_entrada_id?.precio || 0);
   }, 0);
 
   const totalEvento = totalEntradas + totalReservas + totalListas + totalPuerta;
   totalFacturado += totalEvento;
 
-  const entradasAccedidas = entradasEvento.reduce((sum, e) => sum + e.cantidad, 0);
-  const listasAccedidas = listasEvento.reduce((sum, l) => sum + l.personas_accedidas, 0);
-  const puertaAccedidas = enPuertaEvento.reduce((sum, p) => sum + p.cantidad_personas, 0);
+  const entradasAccedidas = entradasEvento.reduce(
+    (sum, e) => sum + e.cantidad,
+    0
+  );
+  const listasAccedidas = listasEvento.reduce(
+    (sum, l) => sum + l.personas_accedidas,
+    0
+  );
+  const puertaAccedidas = enPuertaEvento.reduce(
+    (sum, p) => sum + p.cantidad_personas,
+    0
+  );
 
   totalEntradasAccedidas += entradasAccedidas;
   totalListasAccedidas += listasAccedidas;
@@ -96,30 +108,43 @@ for (const evento of eventos) {
   totalReservasHechas += reservasEvento.reduce((sum, r) => sum + r.cantidad, 0);
 
   const porcentajeComision = evento.porcentaje_comision || 0;
-  totalComisiones += totalEvento * (porcentajeComision / 100);
+  // totalComisiones += totalEvento * (porcentajeComision / 100);
+
+  const comisionFija = evento.comision_fija || 0;
+  totalComisiones += totalEvento * (porcentajeComision / 100) + comisionFija;
 }
 ---
 
 <Layout title={title}>
-
   <h1 class="text-4xl font-bold mb-6">🎉 {title}</h1>
 
   <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div class="bg-white p-6 rounded-2xl shadow-lg border">
       <h2 class="text-md text-gray-500">💶 Total facturado</h2>
-      <p class="text-3xl font-bold text-gray-800">{totalFacturado.toFixed(2)} €</p>
+      <p class="text-3xl font-bold text-gray-800">
+        {totalFacturado.toFixed(2)} €
+      </p>
     </div>
     <div class="bg-white p-6 rounded-2xl shadow-lg border">
       <h2 class="text-md text-gray-500">👥 Total asistentes</h2>
       <p class="text-3xl font-bold text-gray-800">{totalPersonas}</p>
     </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg border">
+    <!-- <div class="bg-white p-6 rounded-2xl shadow-lg border">
       <h2 class="text-md text-gray-500">🍾 Reservas hechas</h2>
       <p class="text-3xl font-bold text-gray-800">{totalReservasHechas}</p>
+    </div> -->
+    <div class="bg-white p-6 rounded-2xl shadow-lg border">
+      <h2 class="text-md text-gray-500">💰 Comision Total</h2>
+      <p class="text-3xl font-bold text-gray-800">
+        {totalComisiones.toFixed(2)} €
+      </p>
     </div>
     <div class="bg-white p-6 rounded-2xl shadow-lg border">
-      <h2 class="text-md text-gray-500">💰 Mis comisiones</h2>
-      <p class="text-3xl font-bold text-gray-800">{totalComisiones.toFixed(2)} €</p>
+      <h2 class="text-md text-gray-500">💵 Fijo</h2>
+      <p class="text-3xl font-bold text-gray-800">
+        {eventos.reduce((sum, e) => sum + (e.comision_fija || 0), 0).toFixed(2)}
+        €
+      </p>
     </div>
   </section>
 
@@ -127,20 +152,26 @@ for (const evento of eventos) {
     <h2 class="text-xl font-semibold mb-4">🔍 Desglose de asistentes</h2>
     <ul class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-gray-700">
       <li>🎫 Entradas: <strong>{totalEntradasAccedidas}</strong> personas</li>
-      <li>📝 Listas: <strong>{totalListasAccedidas}</strong> personas accedidas</li>
+      <li>
+        📝 Listas: <strong>{totalListasAccedidas}</strong> personas accedidas
+      </li>
       <li>🚪 En puerta: <strong>{totalPuertaAccedidas}</strong> personas</li>
     </ul>
   </section>
 
   <section class="bg-white p-6 rounded-2xl shadow-lg border mt-10">
     <h2 class="text-xl font-semibold mb-4">💳 Desglose por tarifa</h2>
-    <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-700">
-      {Object.entries(tarifas).map(([nombre, cantidad]) => (
-        <li class="border p-3 rounded-xl shadow-sm flex justify-between items-center">
-          <span class="font-medium">{nombre}</span>
-          <span class="text-gray-600">{cantidad} personas</span>
-        </li>
-      ))}
+    <ul
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm text-gray-700"
+    >
+      {
+        Object.entries(tarifas).map(([nombre, cantidad]) => (
+          <li class="border p-3 rounded-xl shadow-sm flex justify-between items-center">
+            <span class="font-medium">{nombre}</span>
+            <span class="text-gray-600">{cantidad} personas</span>
+          </li>
+        ))
+      }
     </ul>
   </section>
 
