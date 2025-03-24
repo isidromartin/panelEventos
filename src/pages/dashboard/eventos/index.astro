@@ -1,94 +1,236 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import { supabase } from '../../../lib/supabaseClient';
-import '../../../styles/global.css';
-
-import { getSession } from '../../../lib/auth';
+import Layout from "../../../layouts/Layout.astro";
+import { supabase } from "../../../lib/supabaseClient";
+import "../../../styles/global.css";
+import { getSession } from "../../../lib/auth";
 
 const session = await getSession(Astro);
-
 if (!session) {
-  return Astro.redirect('/login', 302);
+  return Astro.redirect("/login", 302);
 }
 
-const title = 'Eventos';
+const searchParams = Astro.url.searchParams;
+const tipoFiltro = searchParams.get("tipo") || "";
+const desde = searchParams.get("desde") || "";
+const hasta = searchParams.get("hasta") || "";
+const sort = searchParams.get("sort") || "fecha";
+const order = searchParams.get("order") || "desc";
 
-const { data: eventos } = await supabase.from('eventos').select('*');
+const title = "Eventos";
 
-const idsEventos = eventos?.map(e => e.id) ?? [];
-let entradas = [], reservas = [], listas = [], enPuerta = [];
+// Obtener tipos únicos de eventos
+const { data: tiposData } = await supabase
+  .from("eventos")
+  .select("tipo")
+  .neq("tipo", null);
+
+const tiposUnicos = [...new Set(tiposData?.map((e) => e.tipo))].sort();
+
+// Construir la query base con filtros
+let query = supabase.from("eventos").select("*");
+if (tipoFiltro) query = query.eq("tipo", tipoFiltro);
+if (desde) query = query.gte("fecha", desde);
+if (hasta) query = query.lte("fecha", hasta);
+
+const columnasSupabase = ["fecha", "tipo", "nombre"];
+if (columnasSupabase.includes(sort)) {
+  query = query.order(sort, { ascending: order === "asc" });
+}
+
+const { data: eventos } = await query;
+
+const idsEventos = eventos?.map((e) => e.id) ?? [];
+let entradas = [],
+  reservas = [],
+  listas = [],
+  enPuerta = [];
 
 if (idsEventos.length > 0) {
   const { data: e } = await supabase
-    .from('entradas_evento')
-    .select('evento_id, cantidad, tipo_entrada_id (precio)');
+    .from("entradas_evento")
+    .select("evento_id, cantidad, tipo_entrada_id (precio)");
   entradas = e ?? [];
 
   const { data: r } = await supabase
-    .from('reservas_evento')
-    .select('evento_id, cantidad, tipo_reserva_id (precio)');
+    .from("reservas_evento")
+    .select("evento_id, cantidad, tipo_reserva_id (precio)");
   reservas = r ?? [];
 
   const { data: l } = await supabase
-    .from('listas')
-    .select('evento_id, personas_accedidas, tipo_entrada_id (precio)');
+    .from("listas")
+    .select("evento_id, personas_accedidas, tipo_entrada_id (precio)");
   listas = l ?? [];
 
   const { data: p } = await supabase
-    .from('en_puerta')
-    .select('evento_id, cantidad_personas, tipo_entrada_id (precio)');
+    .from("en_puerta")
+    .select("evento_id, cantidad_personas, tipo_entrada_id (precio)");
   enPuerta = p ?? [];
 }
 
-const eventosConFacturacion = eventos?.map(evento => {
-  const totalEntradas = entradas
-    .filter(e => e.evento_id === evento.id)
-    .reduce((sum, e) => sum + (e.cantidad * (e.tipo_entrada_id?.precio || 0)), 0);
+let eventosConFacturacion =
+  eventos?.map((evento) => {
+    const totalEntradas = entradas
+      .filter((e) => e.evento_id === evento.id)
+      .reduce(
+        (sum, e) => sum + e.cantidad * (e.tipo_entrada_id?.precio || 0),
+        0
+      );
 
-  const totalReservas = reservas
-    .filter(r => r.evento_id === evento.id)
-    .reduce((sum, r) => sum + (r.cantidad * (r.tipo_reserva_id?.precio || 0)), 0);
+    const totalReservas = reservas
+      .filter((r) => r.evento_id === evento.id)
+      .reduce(
+        (sum, r) => sum + r.cantidad * (r.tipo_reserva_id?.precio || 0),
+        0
+      );
 
-  const totalListas = listas
-    .filter(l => l.evento_id === evento.id)
-    .reduce((sum, l) => sum + (l.personas_accedidas * (l.tipo_entrada_id?.precio || 0)), 0);
+    const totalListas = listas
+      .filter((l) => l.evento_id === evento.id)
+      .reduce(
+        (sum, l) =>
+          sum + l.personas_accedidas * (l.tipo_entrada_id?.precio || 0),
+        0
+      );
 
-  const totalPuerta = enPuerta
-    .filter(p => p.evento_id === evento.id)
-    .reduce((sum, p) => sum + (p.cantidad_personas * (p.tipo_entrada_id?.precio || 0)), 0);
+    const totalPuerta = enPuerta
+      .filter((p) => p.evento_id === evento.id)
+      .reduce(
+        (sum, p) =>
+          sum + p.cantidad_personas * (p.tipo_entrada_id?.precio || 0),
+        0
+      );
 
-  const totalFacturado = totalEntradas + totalReservas + totalListas + totalPuerta
+    const comisionFija = evento.comision_fija || 0;
+    // totalComisiones += totalEvento * (porcentajeComision / 100) + comisionFija;
 
+    const totalFacturado =
+      totalEntradas + totalReservas + totalListas + totalPuerta;
     const comision = evento.porcentaje_comision
-  ? (totalFacturado * (evento.porcentaje_comision / 100)).toFixed(2)
-  : '0.00';
+      ? (
+          totalFacturado * (evento.porcentaje_comision / 100) +
+          comisionFija
+        ).toFixed(2)
+      : "0.00";
 
-  return {
-    ...evento,
-    comision,
-    totalFacturado: totalEntradas + totalReservas + totalListas + totalPuerta
-  };
-});
+    return {
+      ...evento,
+      comision,
+      totalFacturado,
+    };
+  }) ?? [];
+
+if (Array.isArray(eventosConFacturacion)) {
+  if (sort === "totalFacturado") {
+    eventosConFacturacion.sort((a, b) =>
+      order === "asc"
+        ? a.totalFacturado - b.totalFacturado
+        : b.totalFacturado - a.totalFacturado
+    );
+  } else if (sort === "comision") {
+    eventosConFacturacion.sort((a, b) =>
+      order === "asc"
+        ? parseFloat(a.comision) - parseFloat(b.comision)
+        : parseFloat(b.comision) - parseFloat(a.comision)
+    );
+  }
+}
 ---
 
 <Layout title={title}>
   <h1 class="text-4xl font-bold mb-8">📅 {title}</h1>
 
+  <form
+    method="GET"
+    class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+  >
+    <div>
+      <label class="block text-sm font-medium text-gray-700"
+        >Tipo de evento</label
+      >
+      <select name="tipo" class="w-full border rounded p-2">
+        <option value="">Todos</option>
+        {
+          tiposUnicos.map((tipo) => (
+            <option value={tipo} selected={tipoFiltro === tipo}>
+              {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+            </option>
+          ))
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Desde</label>
+      <input
+        type="date"
+        name="desde"
+        value={desde}
+        class="w-full border rounded p-2"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Hasta</label>
+      <input
+        type="date"
+        name="hasta"
+        value={hasta}
+        class="w-full border rounded p-2"
+      />
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="bg-black text-white px-4 py-2 rounded w-full"
+        >Filtrar</button
+      >
+      <a
+        href="/dashboard/eventos"
+        class="text-sm text-gray-500 underline self-center">Reset</a
+      >
+    </div>
+  </form>
+
+  <div class="mb-6 flex flex-wrap gap-4 text-sm text-gray-600">
+    Ordenar por:
+    <a href={`?sort=fecha&order=desc`} class="underline">Fecha ↓</a>
+    <a href={`?sort=fecha&order=asc`} class="underline">Fecha ↑</a>
+    <a href={`?sort=totalFacturado&order=desc`} class="underline"
+      >Facturación ↓</a
+    >
+    <a href={`?sort=totalFacturado&order=asc`} class="underline"
+      >Facturación ↑</a
+    >
+    <a href={`?sort=comision&order=desc`} class="underline">Comisión ↓</a>
+    <a href={`?sort=comision&order=asc`} class="underline">Comisión ↑</a>
+  </div>
+
   <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    {eventosConFacturacion?.map(evento => (
-      <div class="bg-white rounded-2xl shadow-lg border p-6 space-y-3 hover:shadow-xl transition">
-        <h2 class="text-xl font-bold text-gray-800">{evento.nombre}</h2>
-        <p class="text-sm text-gray-500">{evento.fecha} — {evento.tipo}</p>
-        <p class="text-md text-gray-700">
-          💰 <span class="font-semibold">Facturado:</span> <strong>{evento.totalFacturado.toFixed(2)} €</strong>
-        </p>
-        <p class="text-md text-gray-700">
-          💰 <span class="font-semibold">Comisionado:</span> <strong>{evento.comision} €</strong>
-        </p>
-        <a href={`/dashboard/eventos/${evento.id}`} class="inline-block mt-2 text-sm text-blue-600 hover:underline">
-          Ver estadísticas →
-        </a>
-      </div>
-    ))}
+    {
+      eventosConFacturacion.map((evento) => (
+        <div class="bg-white rounded-2xl shadow-lg border p-6 space-y-3 hover:shadow-xl transition">
+          <h2 class="text-xl font-bold text-gray-800">{evento.nombre}</h2>
+          <p class="text-sm text-gray-500">
+            {evento.fecha} — {evento.tipo}
+          </p>
+          <p class="text-md text-gray-700">
+            💰 <span class="font-semibold">Facturado:</span>{" "}
+            <strong>{evento.totalFacturado.toFixed(2)} €</strong>
+          </p>
+          <p class="text-md text-gray-700">
+            💰 <span class="font-semibold">Comisionado:</span>{" "}
+            <strong>{evento.comision} €</strong>
+          </p>
+          <p class="text-md text-gray-700">
+            💰 <span class="font-semibold">Fijo:</span>{" "}
+            <strong>{evento.comisionFija} €</strong>
+          </p>
+          <a
+            href={`/dashboard/eventos/${evento.id}`}
+            class="inline-block mt-2 text-sm text-blue-600 hover:underline"
+          >
+            Ver estadísticas →
+          </a>
+        </div>
+      ))
+    }
   </section>
 </Layout>
