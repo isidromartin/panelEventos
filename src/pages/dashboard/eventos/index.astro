@@ -224,11 +224,13 @@ if (Array.isArray(eventosConFacturacion)) {
             💰 <span class="font-semibold">Fijo:</span>{" "}
             <strong>{evento.comisionFija} €</strong>
           </p>
+
           <a
             href={`/dashboard/eventos/${evento.id}`}
-            class="inline-block mt-2 text-sm text-blue-600 hover:underline"
+            role="button"
+            class="w-full block text-center bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
           >
-            Ver estadísticas →
+            Ver evento
           </a>
         </div>
       ))
